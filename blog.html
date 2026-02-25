@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧分享 - 易經智慧</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        /* 導航列 */
+        .navbar {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 0;
+            border-bottom: 1px solid rgba(240, 165, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .nav-brand {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #f0a500, #ff9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            padding: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 0;
+        }
+
+        .nav-menu li a {
+            display: block;
+            padding: 20px 25px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-menu li a:hover {
+            color: #f0a500;
+            background: rgba(240, 165, 0, 0.1);
+            border-bottom-color: #f0a500;
+        }
+
+        .nav-menu li a.active {
+            color: #f0a500;
+            border-bottom-color: #f0a500;
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 30px;
+        }
+
+        /* 頁面標題 */
+        .page-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .page-title {
+            font-size: 2.5em;
+            color: #f0a500;
+            margin-bottom: 15px;
+        }
+
+        .page-subtitle {
+            font-size: 1.2em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* 文章網格 */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .blog-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(240, 165, 0, 0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            display: block;
+        }
+
+        .blog-card:hover {
+            transform: translateY(-10px);
+            border-color: #f0a500;
+            box-shadow: 0 15px 40px rgba(240, 165, 0, 0.3);
+        }
+
+        .blog-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, rgba(240, 165, 0, 0.3), rgba(255, 149, 0, 0.3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+        }
+
+        .blog-content {
+            padding: 25px;
+        }
+
+        .blog-date {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .blog-title {
+            font-size: 1.5em;
+            color: #f0a500;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .blog-excerpt {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .blog-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .blog-tag {
+            background: rgba(240, 165, 0, 0.2);
+            border: 1px solid rgba(240, 165, 0, 0.5);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #f0a500;
+        }
+
+        /* 空狀態 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        /* 響應式 */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .page-title {
+                font-size: 1.8em;
+            }
+
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 導航列 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <span>☯️</span>
+                <span>易經智慧</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="divination.html">占卜</a></li>
+                <li><a href="lookup.html">查詢卦象</a></li>
+                <li><a href="blog.html" class="active">智慧分享</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 頁面標題 -->
+        <div class="page-header">
+            <h1 class="page-title">📚 智慧分享</h1>
+            <p class="page-subtitle">探索易經的智慧與應用</p>
+        </div>
+
+        <!-- 文章網格 -->
+        <div class="blog-grid" id="blogGrid">
+            <!-- 文章卡片範例 -->
+            <a href="blog-post-1.html" class="blog-card">
+                <div class="blog-image">📖</div>
+                <div class="blog-content">
+                    <div class="blog-date">這是日期ψ(｀∇´)ψ</div>
+                    <h2 class="blog-title">這是titleヾ(≧▽≦*)o</h2>
+                    <p class="blog-excerpt">
+                        本內文區塊還在努力施工中(☄◣ω◢)☄
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">沒在時間內完成<(_ _)></span>
+                        <span class="blog-tag">沒在時間內完成<(_ _)></span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="blog-post-2.html" class="blog-card">
+                <div class="blog-image">🎴</div>
+                <div class="blog-content">
+                    <div class="blog-date">這是日期ψ(｀∇´)ψ</div>
+                    <h2 class="blog-title">這是titleヾ(≧▽≦*)o</h2>
+                    <p class="blog-excerpt">
+                        本內文區塊還在努力施工中(☄◣ω◢)☄
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">沒在時間內完成<(_ _)></span>
+                        <span class="blog-tag">沒在時間內完成<(_ _)></span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="blog-post-3.html" class="blog-card">
+                <div class="blog-image">☯️</div>
+                <div class="blog-content">
+                    <div class="blog-date">【這是日期ψ(｀∇´)ψ】2026.02.15</div>
+                    <h2 class="blog-title">【這是titleヾ(≧▽≦*)o】陰陽之道：易經中的辯證思想</h2>
+                    <p class="blog-excerpt">
+			【本內文區塊還在努力施工中(☄◣ω◢)☄】
+                        陰陽不是絕對的對立，而是相互依存、相互轉化的整體。
+                        探討易經如何透過陰陽變化解讀世界...
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">沒在時間內完成<(_ _)></span>
+                        <span class="blog-tag">沒在時間內完成<(_ _)></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // 可以從這裡動態載入文章列表
+        // 例如從JSON文件或後端API獲取
+    </script>
+</body>
+</html>

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卦象查詢 - 易經智慧</title>
+    
+    <!-- 引入易經文本數據庫 -->
+    <script src="yijing-text.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        /* 導航列 */
+        .navbar {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 0;
+            border-bottom: 1px solid rgba(240, 165, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .nav-brand {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #f0a500, #ff9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            padding: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 0;
+        }
+
+        .nav-menu li a {
+            display: block;
+            padding: 20px 25px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-menu li a:hover {
+            color: #f0a500;
+            background: rgba(240, 165, 0, 0.1);
+            border-bottom-color: #f0a500;
+        }
+
+        .nav-menu li a.active {
+            color: #f0a500;
+            border-bottom-color: #f0a500;
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 30px;
+        }
+
+        /* 頁面標題 */
+        .page-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: #f0a500;
+            margin-bottom: 20px;
+        }
+
+        .page-subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2em;
+            margin-bottom: 50px;
+        }
+
+        /* 選擇面板 */
+        .selection-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(240, 165, 0, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 1.3em;
+            color: #f0a500;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        /* 下拉選單 */
+        .select-wrapper {
+            position: relative;
+        }
+
+        .gua-select {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.2em;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(240, 165, 0, 0.3);
+            border-radius: 10px;
+            color: white;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f0a500' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            padding-right: 45px;
+        }
+
+        .gua-select:focus {
+            border-color: #f0a500;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .gua-select option {
+            background: #16213e;
+            color: white;
+            padding: 10px;
+        }
+
+        /* 變爻選擇區 */
+        .yao-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .checkbox-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(240, 165, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(240, 165, 0, 0.1);
+            border-color: #f0a500;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #f0a500;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 1.1em;
+            color: rgba(255, 255, 255, 0.8);
+            flex: 1;
+        }
+
+        .checkbox-item input[type="checkbox"]:checked + label {
+            color: #f0a500;
+            font-weight: bold;
+        }
+
+        /* 查詢按鈕 */
+        .submit-button {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3em;
+            background: linear-gradient(135deg, #f0a500, #ff9500);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 30px;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(240, 165, 0, 0.5);
+        }
+
+        .submit-button:active {
+            transform: translateY(0);
+        }
+
+        /* 結果顯示區 */
+        .result-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 2px solid #f0a500;
+            border-radius: 20px;
+            padding: 40px;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(240, 165, 0, 0.3);
+        }
+
+        .result-title {
+            font-size: 2.5em;
+            color: #f0a500;
+            margin-bottom: 15px;
+        }
+
+        .result-changing {
+            font-size: 1.3em;
+            color: #ff9500;
+        }
+
+        .result-image {
+            max-width: 300px;
+            margin: 0 auto 30px;
+            display: block;
+        }
+
+        .result-text {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 2;
+            white-space: pre-wrap;
+            font-size: 1.1em;
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        /* 滾動條樣式 */
+        .result-text::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .result-text::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .result-text::-webkit-scrollbar-thumb {
+            background: #f0a500;
+            border-radius: 10px;
+        }
+
+        /* 動畫 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 響應式 */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .page-title {
+                font-size: 1.8em;
+            }
+
+            .selection-panel {
+                padding: 25px 20px;
+            }
+
+            .yao-checkboxes {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .result-panel {
+                padding: 25px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 導航列 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <span>☯️</span>
+                <span>易經智慧</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="divination.html">占卜</a></li>
+                <li><a href="lookup.html" class="active">查詢卦象</a></li>
+                <li><a href="blog.html">智慧分享</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <h1 class="page-title">🔍 卦象查詢</h1>
+        <p class="page-subtitle">選擇卦象和變爻,查看易經解讀</p>
+
+        <!-- 選擇面板 -->
+        <div class="selection-panel">
+            <!-- 選擇卦象 -->
+            <div class="form-group">
+                <label class="form-label">1️⃣ 選擇卦象</label>
+                <div class="select-wrapper">
+                    <select class="gua-select" id="guaSelect">
+                        <option value="">請選擇一個卦象...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 選擇變爻 -->
+            <div class="form-group">
+                <label class="form-label">2️⃣ 選擇變爻 (可複選,不選表示無變爻)</label>
+                <div class="yao-checkboxes">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="yao1" value="0">
+                        <label for="yao1">初爻</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="yao2" value="1">
+                        <label for="yao2">二爻</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="yao3" value="2">
+                        <label for="yao3">三爻</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="yao4" value="3">
+                        <label for="yao4">四爻</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="yao5" value="4">
+                        <label for="yao5">五爻</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="yao6" value="5">
+                        <label for="yao6">上爻</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 查詢按鈕 -->
+            <button class="submit-button" onclick="showResult()">
+                📖 查看卦象解讀
+            </button>
+        </div>
+
+        <!-- 結果顯示區 -->
+        <div class="result-panel" id="resultPanel">
+            <div class="result-header">
+                <h2 class="result-title" id="resultTitle"></h2>
+                <div class="result-changing" id="resultChanging"></div>
+            </div>
+            <img class="result-image" id="resultImage" alt="卦象圖">
+            <div class="result-text" id="resultText"></div>
+        </div>
+    </div>
+
+    <script>
+        // 爻名稱映射
+        const yaoNames = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
+        
+        // 初始化下拉選單
+        function initGuaSelect() {
+            const select = document.getElementById('guaSelect');
+            const guaList = Object.keys(YIJING_TEXT || {});
+            
+            guaList.forEach((guaName, index) => {
+                const option = document.createElement('option');
+                option.value = guaName;
+                option.textContent = `第 ${index + 1} 卦 - ${guaName}`;
+                select.appendChild(option);
+            });
+        }
+        
+        // 顯示結果
+        function showResult() {
+            const select = document.getElementById('guaSelect');
+            const selectedGua = select.value;
+            
+            if (!selectedGua) {
+                alert('請先選擇一個卦象!');
+                return;
+            }
+            
+            const guaData = YIJING_TEXT[selectedGua];
+            if (!guaData) {
+                alert('此卦資料尚未完整');
+                return;
+            }
+            
+            // 取得選中的變爻
+            const changingYaos = [];
+            for (let i = 1; i <= 6; i++) {
+                const checkbox = document.getElementById(`yao${i}`);
+                if (checkbox.checked) {
+                    changingYaos.push(yaoNames[i - 1]);
+                }
+            }
+            
+            // 顯示結果
+            const resultPanel = document.getElementById('resultPanel');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultChanging = document.getElementById('resultChanging');
+            const resultImage = document.getElementById('resultImage');
+            const resultText = document.getElementById('resultText');
+            
+            resultTitle.textContent = selectedGua;
+            
+            if (changingYaos.length > 0) {
+                resultChanging.textContent = `變爻：${changingYaos.join('、')}`;
+            } else {
+                resultChanging.textContent = '無變爻';
+            }
+            
+            if (guaData.image) {
+                resultImage.src = guaData.image;
+                resultImage.style.display = 'block';
+                resultImage.onerror = () => { resultImage.style.display = 'none'; };
+            } else {
+                resultImage.style.display = 'none';
+            }
+            
+            resultText.textContent = guaData.text || '內容載入中...';
+            
+            resultPanel.style.display = 'block';
+            
+            // 滾動到結果區域
+            resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // 初始化
+        initGuaSelect();
+    </script>
+</body>
+</html>
