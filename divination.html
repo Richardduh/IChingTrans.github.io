@@ -8,6 +8,9 @@
     <!-- 引入易經文本數據庫 -->
     <script src="yijing-text.js"></script>
     
+    <!-- 引入html2canvas用於截圖 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         /* 主要樣式 */
         /* Google AdSense 保留欄位 */
@@ -701,14 +704,15 @@
                         white-space: pre-wrap;
                         line-height: 2;
                         font-size: 1.05em;
-                        max-height: 500px;
-                        overflow-y: auto;
                         border: 1px solid rgba(240, 165, 0, 0.3);
                     "></div>
                 </div>
 
                 <div class="navigation-buttons">
                     <button class="button secondary" id="backToResult">返回結果頁</button>
+                    <button class="button" id="saveAsImageBtn" onclick="saveResultAsImage()" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        📷 保存為圖片
+                    </button>
                     <button class="button" id="toFeedbackSurvey">填寫使用心得問卷</button>
                 </div>
             </div>
@@ -724,14 +728,23 @@
                 </div>
 
                 <div class="survey-container">
-                    <iframe src="https://docs.google.com/forms/d/e/1FAIpQLScgSw5z_tE-lBucpCFj1l5gUuJxGr4-1nXze-NOvi2l20wiMg/viewform?embedded=true" width="640" height="3069" frameborder="0" marginheight="0" marginwidth="0">載入中…</iframe>
+                    <!-- 
+                    ==================== Google 表單嵌入位置 ====================
+                    請將您的「使用心得問卷」Google 表單嵌入代碼放在這裡
                     
-                    <!-- 示意用的佔位內容 
+                    範例：
+                    <iframe src="https://docs.google.com/forms/d/e/YOUR_FEEDBACK_FORM_ID/viewform?embedded=true" 
+                            width="100%" height="1000" frameborder="0" marginheight="0" marginwidth="0">
+                        載入中…
+                    </iframe>
+                    ==================== Google 表單嵌入位置 ====================
+                    -->
+                    
+                    <!-- 示意用的佔位內容 -->
                     <div style="padding: 40px; text-align: center; color: #888;">
                         <p style="font-size: 1.2em; margin-bottom: 15px;">📝 使用心得問卷將顯示於此</p>
                         <p>請在上方註解區域插入您的 Google 表單嵌入代碼</p>
                     </div>
-		   -->
                 </div>
 
                 <div class="navigation-buttons">
@@ -1454,6 +1467,121 @@
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ==================== 保存為圖片功能 ====================
+        async function saveResultAsImage() {
+            const button = document.getElementById('saveAsImageBtn');
+            
+            if (!button) {
+                alert('找不到按鈕元素');
+                return;
+            }
+            
+            const originalText = button.textContent;
+            button.textContent = '📸 生成中...';
+            button.disabled = true;
+
+            try {
+                // 檢查是否載入html2canvas
+                if (typeof html2canvas === 'undefined') {
+                    throw new Error('html2canvas 庫未載入');
+                }
+
+                // 要截圖的區域
+                const screen4 = document.getElementById('screen4');
+                if (!screen4) {
+                    throw new Error('找不到screen4元素');
+                }
+
+                const surveyScreen = screen4.querySelector('.survey-screen');
+                if (!surveyScreen) {
+                    throw new Error('找不到survey-screen元素');
+                }
+
+                // 獲取按鈕區域
+                const navButtons = screen4.querySelector('.navigation-buttons');
+                const adsPlaceholders = screen4.querySelectorAll('.adsense-placeholder');
+                
+                // 臨時隱藏不需要的元素
+                if (navButtons) navButtons.style.display = 'none';
+                adsPlaceholders.forEach(el => el.style.display = 'none');
+
+                // 等待圖片載入
+                const images = surveyScreen.querySelectorAll('img');
+                await Promise.all(Array.from(images).map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => resolve(); // 即使圖片失敗也繼續
+                        setTimeout(resolve, 3000); // 3秒超時
+                    });
+                }));
+
+                console.log('開始生成canvas...');
+
+                // 生成圖片 - 使用更保守的設定
+                const canvas = await html2canvas(surveyScreen, {
+                    backgroundColor: '#16213e',
+                    scale: 1.5, // 降低到1.5倍避免記憶體問題
+                    logging: true, // 開啟日誌以便除錯
+                    useCORS: true,
+                    allowTaint: true, // 允許汙染的canvas
+                    imageTimeout: 15000, // 圖片載入超時15秒
+                    removeContainer: true
+                });
+
+                console.log('Canvas生成成功');
+
+                // 恢復元素顯示
+                if (navButtons) navButtons.style.display = '';
+                adsPlaceholders.forEach(el => el.style.display = '');
+
+                // 轉換為圖片
+                let imageData;
+                try {
+                    imageData = canvas.toDataURL('image/png', 0.95);
+                } catch (e) {
+                    console.error('toDataURL失敗:', e);
+                    // 嘗試用較低品質
+                    imageData = canvas.toDataURL('image/jpeg', 0.8);
+                }
+
+                console.log('圖片數據生成成功,大小:', imageData.length);
+
+                // 下載圖片
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().slice(0,19).replace(/[:\-]/g, '');
+                link.download = `易經占卜結果_${timestamp}.png`;
+                link.href = imageData;
+                
+                // 觸發下載
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                console.log('下載觸發成功');
+
+                button.textContent = '✅ 保存成功!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('保存失敗,詳細錯誤:', error);
+                
+                // 恢復元素顯示
+                const navButtons = document.querySelector('.navigation-buttons');
+                const adsPlaceholders = document.querySelectorAll('.adsense-placeholder');
+                if (navButtons) navButtons.style.display = '';
+                adsPlaceholders.forEach(el => el.style.display = '');
+                
+                alert('保存圖片失敗:\n' + error.message + '\n\n請嘗試:\n1. 重新整理頁面\n2. 使用其他瀏覽器(Chrome/Firefox)\n3. 檢查瀏覽器控制台的錯誤訊息');
+                
+                button.textContent = originalText;
+                button.disabled = false;
+            }
         }
 
         // 初始化
