@@ -444,6 +444,23 @@
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             }
         }
+		
+		/* 多選卡片右上角圈圈效果 */
+		.selection-card {
+			position: relative;
+			transition: transform 0.2s;
+		}
+		.selection-card:hover {
+			transform: translateY(-3px);
+		}
+		.select-circle {
+			transition: all 0.2s;
+		}
+		/* 竹簡 hover 效果 */
+		.bamboo-slip:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+		}
     </style>
 </head>
 <body>
@@ -492,6 +509,11 @@
         <!-- 畫面2: 瀏覽卡片 -->
         <div class="screen" id="screen2">
             <div class="card-viewer">
+				<!-- 固定在頂部的夢境顯示（不超過導航欄） -->
+				<div style="background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; border-left: 4px solid #f0a500; position: sticky; top: 70px; z-index: 99;">
+					<div style="color: #f0a500; font-size: 0.85rem; margin-bottom: 6px;">📜 您的夢境</div>
+					<div id="screen2DreamText" style="color: white; line-height: 1.4; word-break: break-word;"></div>
+				</div>
                 <div class="progress-info">
                     <span id="progressText">第 1 卦 / 共 64 卦</span>
                 </div>
@@ -564,6 +586,23 @@
                 </button>
             </div>
         </div>
+		
+		<!-- 畫面5: 竹簡串聯展示 -->
+		<div class="screen" id="screen5">
+			<div class="result-panel" style="padding: 30px;">
+				<div id="bambooFixedDream" style="background:rgba(0,0,0,0.4); border-radius:16px; padding:15px; margin-bottom:25px; border-left:4px solid #f0a500;">
+					<div style="color:#f0a500;">🌙 您的夢境</div>
+					<div id="bambooDreamText" style="color:white; line-height:1.5;"></div>
+				</div>
+				<div style="color:#f0a500; margin-bottom:15px;">📜 您選擇的卦象・竹簡串聯</div>
+				<div id="bambooScrollWrapper" style="overflow-x:auto; white-space:nowrap; padding-bottom:15px;"></div>
+				<div id="bambooDetailPanel" style="margin-top:30px; background:rgba(0,0,0,0.3); border-radius:20px; padding:20px; min-height:200px;">
+					<div style="color:rgba(255,255,200,0.7); text-align:center;">點擊任一竹簡，顯示該卦解讀</div>
+				</div>
+				<button class="restart-button" onclick="resetAll()" style="margin-top:30px;">🌙 重新解夢</button>
+				<button class="restart-button" onclick="saveBambooResultAsImage()" style="margin-top:15px; background:linear-gradient(135deg, #667eea, #764ba2);">📷 保存結果為圖片</button>
+			</div>
+		</div>
     </div>
 
     <script>
@@ -595,6 +634,8 @@
             dreamState.currentIndex = 0;
             dreamState.likedCards = [];
             dreamState.finalCard = null;
+
+			document.getElementById('screen2DreamText').innerText = dreamText;
 
             showScreen(2);
             displayCard();
@@ -690,65 +731,299 @@
             }
         }
 
-        // 顯示選擇畫面
-        function showSelectionScreen() {
-            const grid = document.getElementById('selectionGrid');
-            grid.innerHTML = '';
+		// 顯示多選畫面（每個卡片右上角有圈圈，可複選，完成後跳轉竹簡）
+		function showSelectionScreen() {
+			const grid = document.getElementById('selectionGrid');
+			grid.innerHTML = '';
 
-            dreamState.likedCards.forEach(guaName => {
-                const guaData = YIJING_TEXT[guaName];
-                const dreamImage = DREAM_IMAGES[guaName];
-                
-                const card = document.createElement('div');
-                card.className = 'selection-card';
-                card.onclick = () => showResult(guaName);
+			// 儲存每個卦的選中狀態與序號
+			window.tempSelectedMap = new Map();  // key: 卦名, value: 序號
+			let nextSeq = 1;
 
-                card.innerHTML = `
-                    <div class="selection-card-title">${guaName}</div>
-                    ${dreamImage ? 
-                        `<img src="${dreamImage}" alt="${guaName}" onerror="this.style.display='none'">` 
-                        : ''}
-                `;
+			// 顯示夢境文字在最上方（原問題）
+			const headerDiv = document.querySelector('#screen3 .page-header');
+			let dreamBar = document.getElementById('dreamBarForSelect');
+			if (!dreamBar) {
+				dreamBar = document.createElement('div');
+				dreamBar.id = 'dreamBarForSelect';
+				dreamBar.style.cssText = 'background:rgba(0,0,0,0.5); border-radius:16px; padding:12px 20px; margin-bottom:25px; border-left:4px solid #f0a500;';
+				headerDiv.insertAdjacentElement('afterend', dreamBar);
+			}
+			dreamBar.innerHTML = `<div style="color:#f0a500; font-size:0.9rem;">📜 您的夢境</div><div style="color:white;">${dreamState.dreamText}</div>`;
 
-                grid.appendChild(card);
-            });
+			// 建立每個卦的卡片（含右上角圈圈）
+			dreamState.likedCards.forEach(guaName => {
+				const guaData = YIJING_TEXT[guaName];
+				const dreamImage = DREAM_IMAGES[guaName];
+				
+				const card = document.createElement('div');
+				card.className = 'selection-card';
+				card.style.position = 'relative';
+				card.style.cursor = 'pointer';
+				
+				// 右上角空心圈圈
+				const badge = document.createElement('div');
+				badge.className = 'select-circle';
+				badge.textContent = '○';
+				badge.style.cssText = 'position:absolute; top:10px; right:10px; width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,0.6); border:2px solid #f0a500; color:#f0a500; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:1.2rem; z-index:2; transition:0.2s;';
+				
+				const innerContent = document.createElement('div');
+				innerContent.innerHTML = `
+					<div class="selection-card-title">${guaName}</div>
+					${dreamImage ? `<img src="${dreamImage}" alt="${guaName}" onerror="this.style.display='none'" style="max-width:150px; margin-top:10px;">` : ''}
+				`;
+				card.appendChild(badge);
+				card.appendChild(innerContent);
+				
+				// 點擊卡片時切換選中狀態（改變圈圈數字）
+				card.onclick = (e) => {
+					e.stopPropagation();
+					if (window.tempSelectedMap.has(guaName)) {
+						// 取消選中
+						window.tempSelectedMap.delete(guaName);
+						badge.textContent = '○';
+						badge.style.background = 'rgba(0,0,0,0.6)';
+						badge.style.color = '#f0a500';
+						// 重新整理序號
+						const entries = Array.from(window.tempSelectedMap.entries());
+						entries.sort((a,b) => a[1] - b[1]);
+						window.tempSelectedMap.clear();
+						let newSeq = 1;
+						for (let [g, _] of entries) {
+							window.tempSelectedMap.set(g, newSeq++);
+						}
+						// 更新所有圈圈數字
+						document.querySelectorAll('.selection-card').forEach(c => {
+							const g = c.querySelector('.selection-card-title')?.innerText;
+							const b = c.querySelector('.select-circle');
+							if (g && window.tempSelectedMap.has(g)) {
+								b.textContent = window.tempSelectedMap.get(g);
+								b.style.background = '#2196f3';
+								b.style.color = 'white';
+							} else if (g) {
+								b.textContent = '○';
+								b.style.background = 'rgba(0,0,0,0.6)';
+								b.style.color = '#f0a500';
+							}
+						});
+					} else {
+						// 選中
+						window.tempSelectedMap.set(guaName, nextSeq);
+						badge.textContent = nextSeq;
+						badge.style.background = '#2196f3';
+						badge.style.color = 'white';
+						nextSeq++;
+					}
+				};
+				
+				grid.appendChild(card);
+			});
+			
+			// 加入「完成選擇」按鈕
+			let completeBtn = document.getElementById('completeMultiSelectBtn');
+			if (!completeBtn) {
+				completeBtn = document.createElement('button');
+				completeBtn.id = 'completeMultiSelectBtn';
+				completeBtn.className = 'restart-button';
+				completeBtn.textContent = '✨ 完成選擇，檢視竹簡串聯 ✨';
+				completeBtn.style.marginTop = '30px';
+				document.querySelector('#screen3 .selection-grid').after(completeBtn);
+			}
+			completeBtn.onclick = () => {
+				if (window.tempSelectedMap.size === 0) {
+					alert('請至少選擇一個卦象（點擊卡片右上角圈圈）');
+					return;
+				}
+				// 依序號排序
+				const sorted = Array.from(window.tempSelectedMap.entries()).sort((a,b) => a[1] - b[1]);
+				const selectedGuas = sorted.map(item => item[0]);
+				jumpToBambooScreen(selectedGuas);
+			};
+			
+			showScreen(3);
+		}
 
-            showScreen(3);
-        }
+		// 竹簡串聯畫面（取代原本的 showResult）
+		function showBambooScroll(selectedGuas) {
+			// 儲存到全域，供點擊使用
+			window.bambooGuas = selectedGuas;
+			
+			// 建立竹簡容器（如果不存在則動態建立）
+			let bambooContainer = document.getElementById('bambooScrollContainer');
+			if (!bambooContainer) {
+				bambooContainer = document.createElement('div');
+				bambooContainer.id = 'bambooScrollContainer';
+				bambooContainer.style.cssText = 'margin-top:30px; background:rgba(0,0,0,0.3); border-radius:24px; padding:20px;';
+				document.querySelector('#screen3 .selection-grid').parentNode.appendChild(bambooContainer);
+			}
+			
+			// 顯示問題（夢境）在最上方
+			bambooContainer.innerHTML = `
+				<div style="background:rgba(240,165,0,0.1); border-radius:16px; padding:12px 20px; margin-bottom:25px;">
+					<div style="color:#f0a500;">🌙 您的夢境</div>
+					<div style="color:white; line-height:1.5;">${dreamState.dreamText}</div>
+				</div>
+				<div style="color:#f0a500; margin-bottom:15px;">📜 選擇的卦象・竹簡串聯</div>
+				<div id="bambooScrollWrapper" style="overflow-x:auto; white-space:nowrap; padding-bottom:15px;"></div>
+				<div id="bambooDetailPanel" style="margin-top:30px; background:rgba(0,0,0,0.4); border-radius:20px; padding:20px; min-height:200px;">
+					<div style="color:rgba(255,255,200,0.7); text-align:center;">點擊任一竹簡，顯示該卦解讀</div>
+				</div>
+				<button class="restart-button" onclick="resetAll()" style="margin-top:30px;">🌙 重新解夢</button>
+			`;
+			
+			// 渲染竹簡串（水平卷軸）
+			const wrapper = document.getElementById('bambooScrollWrapper');
+			const track = document.createElement('div');
+			track.style.display = 'inline-flex';
+			track.style.alignItems = 'center';
+			track.style.gap = '12px';
+			
+			selectedGuas.forEach((gua, idx) => {
+				const slip = document.createElement('div');
+				slip.className = 'bamboo-slip';
+				slip.style.cssText = 'display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:#faf3e0; width:100px; height:160px; border-radius:12px 8px 12px 8px; box-shadow:3px 3px 8px rgba(0,0,0,0.3); cursor:pointer; transition:0.2s; position:relative;';
+				// 直式書寫卦名
+				const verticalText = document.createElement('div');
+				verticalText.style.writingMode = 'vertical-rl';
+				verticalText.style.textOrientation = 'mixed';
+				verticalText.style.fontSize = '1.3rem';
+				verticalText.style.fontWeight = 'bold';
+				verticalText.style.color = '#3e2a1f';
+				verticalText.style.padding = '12px 0';
+				verticalText.style.fontFamily = 'inherit';
+				// 顯示卦名 + 易經符號（若有）
+				let displayName = gua;
+				if (YIJING_TEXT[gua] && YIJING_TEXT[gua].symbol) displayName = YIJING_TEXT[gua].symbol;
+				else displayName = gua;
+				verticalText.innerText = displayName;
+				slip.appendChild(verticalText);
+				
+				slip.onclick = () => {
+					// 高亮當前竹簡
+					document.querySelectorAll('.bamboo-slip').forEach(s => s.style.border = 'none');
+					slip.style.border = '3px solid #f0a500';
+					// 顯示該卦結果
+					showBambooDetail(gua);
+				};
+				track.appendChild(slip);
+				
+				// 添加箭頭（除了最後一個）
+				if (idx < selectedGuas.length - 1) {
+					const arrow = document.createElement('span');
+					arrow.textContent = '→';
+					arrow.style.fontSize = '1.8rem';
+					arrow.style.color = '#f0a500';
+					arrow.style.margin = '0 5px';
+					track.appendChild(arrow);
+				}
+			});
+			
+			wrapper.innerHTML = '';
+			wrapper.appendChild(track);
+			
+			// 預設點擊第一個竹簡
+			if (selectedGuas.length > 0) {
+				const firstSlip = track.querySelector('.bamboo-slip');
+				if (firstSlip) firstSlip.click();
+			}
+			
+			showScreen(3); // 仍在 screen3，但內容已完全替換
+		}
+		
+		// 跳轉到竹簡新畫面 (screen5)
+		function jumpToBambooScreen(selectedGuas) {
+			// 儲存到全域供點擊使用
+			window.bambooGuas = selectedGuas;
+			
+			// 顯示夢境文字
+			document.getElementById('bambooDreamText').innerText = dreamState.dreamText;
+			
+			// 渲染竹簡串（水平卷軸）
+			const wrapper = document.getElementById('bambooScrollWrapper');
+			const track = document.createElement('div');
+			track.style.display = 'inline-flex';
+			track.style.alignItems = 'center';
+			track.style.gap = '12px';
+			wrapper.style.overflowX = 'auto';
+			wrapper.style.whiteSpace = 'nowrap';
+			
+			selectedGuas.forEach((gua, idx) => {
+				const slip = document.createElement('div');
+				slip.className = 'bamboo-slip';
+				slip.style.cssText = 'display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:#faf3e0; width:100px; height:160px; border-radius:12px 8px 12px 8px; box-shadow:3px 3px 8px rgba(0,0,0,0.3); cursor:pointer; transition:0.2s;';
+				
+				// 直式書寫卦名
+				const verticalText = document.createElement('div');
+				verticalText.style.writingMode = 'vertical-rl';
+				verticalText.style.textOrientation = 'mixed';
+				verticalText.style.fontSize = '1.3rem';
+				verticalText.style.fontWeight = 'bold';
+				verticalText.style.color = '#3e2a1f';
+				verticalText.style.padding = '12px 0';
+				verticalText.innerText = gua;  // 直接顯示卦名，不改字典
+				slip.appendChild(verticalText);
+				
+				slip.onclick = () => {
+					document.querySelectorAll('.bamboo-slip').forEach(s => s.style.border = 'none');
+					slip.style.border = '3px solid #f0a500';
+					showBambooDetail(gua);
+				};
+				track.appendChild(slip);
+				
+				// 添加箭頭（除了最後一個）
+				if (idx < selectedGuas.length - 1) {
+					const arrow = document.createElement('span');
+					arrow.textContent = '→';
+					arrow.style.fontSize = '1.8rem';
+					arrow.style.color = '#f0a500';
+					arrow.style.margin = '0 5px';
+					track.appendChild(arrow);
+				}
+			});
+			
+			wrapper.innerHTML = '';
+			wrapper.appendChild(track);
+			
+			// 預設點擊第一個竹簡
+			if (selectedGuas.length > 0) {
+				const firstSlip = track.querySelector('.bamboo-slip');
+				if (firstSlip) firstSlip.click();
+			}
+			
+			showScreen(5);  // 跳到新畫面
+		}
 
-        // 顯示結果
-        function showResult(guaName) {
-            // 添加確認對話框
-            const confirmMessage = `您選擇的卦象是:\n\n${guaName}\n\n確定是這張嗎?`;
-            
-            if (!confirm(confirmMessage)) {
-                // 用戶點擊取消,不顯示結果
-                return;
-            }
-            
-            const guaData = YIJING_TEXT[guaName];
+		// 顯示單一卦的詳細解讀（與之前相同，保留原有字典）
+		function showBambooDetail(guaName) {
+			const guaData = YIJING_TEXT[guaName] || { text: '此卦深意待您體會。', image: '' };
+			const dreamImage = DREAM_IMAGES[guaName] || guaData.image;
+			const detailPanel = document.getElementById('bambooDetailPanel');
+			if (!detailPanel) return;
+			
+			detailPanel.innerHTML = `
+				<div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center; border-bottom:1px solid rgba(240,165,0,0.3); padding-bottom:15px; margin-bottom:15px;">
+					${dreamImage ? `<img src="${dreamImage}" style="max-width:120px; border-radius:12px;" onerror="this.style.display='none'">` : ''}
+					<div style="font-size:1.8rem; color:#f0a500;">${guaName}</div>
+				</div>
+				<div style="line-height:1.8; white-space:pre-wrap;">${guaData.text || '暫無解讀內容'}</div>
+			`;
+		}
 
-            document.getElementById('resultTitle').textContent = guaName;
-            document.getElementById('resultDream').textContent = dreamState.dreamText;
-
-            const resultImage = document.getElementById('resultImage');
-            // 結果頁使用原本的卦圖(不是解夢圖)
-            if (guaData && guaData.image) {
-                resultImage.src = guaData.image;
-                resultImage.style.display = 'block';
-                resultImage.onerror = () => { 
-                    console.error('結果圖片載入失敗:', guaData.image);
-                    resultImage.style.display = 'none'; 
-                };
-            } else {
-                resultImage.style.display = 'none';
-            }
-
-            document.getElementById('resultText').textContent = 
-                guaData ? (guaData.text || '內容載入中...') : '此卦資料尚未完整';
-
-            showScreen(4);
-        }
+		// 顯示單一卦的詳細解讀
+		function showBambooDetail(guaName) {
+			const guaData = YIJING_TEXT[guaName] || { text: '此卦深意待您體會。', image: '' };
+			const dreamImage = DREAM_IMAGES[guaName] || guaData.image;
+			const detailPanel = document.getElementById('bambooDetailPanel');
+			if (!detailPanel) return;
+			
+			detailPanel.innerHTML = `
+				<div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center; border-bottom:1px solid rgba(240,165,0,0.3); padding-bottom:15px; margin-bottom:15px;">
+					${dreamImage ? `<img src="${dreamImage}" style="max-width:120px; border-radius:12px;" onerror="this.style.display='none'">` : ''}
+					<div style="font-size:1.8rem; color:#f0a500;">${guaName}</div>
+				</div>
+				<div style="line-height:1.8; white-space:pre-wrap;">${guaData.text || '暫無解讀內容'}</div>
+			`;
+		}
 
         // 重新瀏覽
         function restartViewing() {
